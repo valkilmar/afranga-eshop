@@ -17,7 +17,7 @@ return new class extends Migration
             $table->bigInteger('price')->unsigned()->default(0);
             $table->integer('quantity')->unsigned()->default(0);
 
-            $table->timestamps();
+            $table->timestamps(6);
         });
     }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
+Route::controller(Controller::class)->group(function () {
+    Route::post('/checkout', 'checkout')->name('checkout');
+    Route::get('/', 'index')->name('index');
 });

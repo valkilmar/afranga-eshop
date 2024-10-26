@@ -56,7 +56,34 @@ class User extends Authenticatable
     }
 
 
-    public function wallet() {
+    public function wallet()
+    {
         return $this->hasOne(Wallet::class);
+    }
+
+
+    public function getBalance() {
+
+        return $this->wallet->getBalance();
+
+    }
+
+
+    public function updateBalance(int $change) {
+
+        return $this->wallet->updateBalance($change);
+
+    }
+
+
+    public function emptyBasket() {
+
+        if ($this->basket->isEmpty()) {
+            return false;
+        }
+
+        $this->basket()->delete();
+
+        return true;
     }
 }
