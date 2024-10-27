@@ -16,5 +16,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::controller(Controller::class)->group(function () {
     Route::post('/checkout', 'checkout')->name('checkout');
+
+    Route::get('/reset', 'reset')->name('reset');
+
     Route::get('/', 'index')->name('index');
 });

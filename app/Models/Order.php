@@ -27,30 +27,22 @@ class Order extends Model
     }
 
 
-    public function getProducts() {
 
-        $response = collect();
+    public static function getTotalPrice($orderLines) {
 
-        $this->orderLines()->each(function (OrderLine $orderLine) use ($response) {
-
-            if ($orderLine->product) {
-                $response->push($orderLine->product);
-            }
-        });
-
-        return $response;
-    }
-
-
-    public function getTotalPrice() {
-
-        $products = $this->getProducts();
-
-        if ($products->isEmpty()) {
+        if (!$orderLines || $orderLines->isEmpty()) {
             return 0;
         }
 
-        return $products->sum('price');
+        $total = 0;
+        
+        $orderLines->each(function (OrderLine $orderLine) use (&$total) {
+
+            $total += $orderLine->product->price * $orderLine->quantity;
+
+        });
+
+        return $total;
 
     }
 

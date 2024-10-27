@@ -28,7 +28,7 @@ class Wallet extends Model
     public function getBalance() {
 
         return $this->balance;
-        
+
     }
 
     /**
@@ -42,7 +42,25 @@ class Wallet extends Model
         $newBalance = $this->balance + $change;
 
         if ($newBalance < 0) {
-            throw new \InvalidArgumentException('Balance can not be negative number.');
+            throw new \InvalidArgumentException("Unable to update {$this->balance} with {$change}");
+        }
+
+        $this->balance = $newBalance;
+
+        return $this->save();
+    }
+
+
+    /**
+     * Set user balance
+     *
+     * @param integer $newBalance
+     * @return boolean
+     */
+    public function setBalance(int $newBalance) {
+
+        if ($newBalance < 0) {
+            throw new \InvalidArgumentException('Balance must be zero or a positive number.');
         }
 
         $this->balance = $newBalance;

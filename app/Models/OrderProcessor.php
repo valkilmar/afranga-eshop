@@ -4,6 +4,11 @@ namespace App\Models;
 
 use Exception;
 use Illuminate\Support\Facades\DB;
+use App\Exceptions\ZeroQuantityBasketException;
+use App\Exceptions\ZeroBalanceException;
+use App\Exceptions\NotEnoughQuantityException;
+use App\Exceptions\NotEnoughBalanceException;
+use App\Exceptions\ProductNotAvailableException;
 
 class OrderProcessor
 {
@@ -11,7 +16,11 @@ class OrderProcessor
 
     protected $orderLines;
 
+    protected $isValidated = false;
+
     const DEADLOCK_SOLVE_ATTEMPTS = 3;
+
+
 
     public function __construct(protected User $user)
     {
@@ -20,33 +29,36 @@ class OrderProcessor
         ]);
 
         $this->orderLines = collect();
+
+        $basket = $this->user->basket;
+
+        if (!$basket->isEmpty()) {
+            $filteredNonZero = $basket->filter(function (Basket $BasketItem) {
+                return $BasketItem->quantity > 0;
+            });
+            
+            $filteredNonZero->each(function (Basket $basketItem) {
+
+                $this->orderLines->push(new OrderLine([
+                    'product_id' => $basketItem->product_id,
+                    'quantity' => $basketItem->quantity,
+                ]));
+                
+            });
+        }
     }
 
 
+
     private function validateNonZeroQuantities() {
-        
-        $basket = $this->user->basket;
 
-        if ($basket->isEmpty()) {
-            throw new \InvalidArgumentException('User basket is empty.');
+        if ($this->user->basket->isEmpty()) {
+            throw new ZeroQuantityBasketException('Your basket is empty. Add some products and then try again.');
         }
 
-        $filteredNonZero = $basket->filter(function (Basket $BasketItem) {
-            return $BasketItem->quantity > 0;
-        });
-         
-        if ($filteredNonZero->isEmpty()) {
-            throw new \InvalidArgumentException('Only zero quantities found in user basket.');
+        if ($this->orderLines->isEmpty()) {
+            throw new ZeroQuantityBasketException('How many items do you need? Zero is not valid answer.');
         }
-        
-        $filteredNonZero->each(function (Basket $basketItem) {
-
-            $this->orderLines->push(new OrderLine([
-                'product_id' => $basketItem->product_id,
-                'quantity' => $basketItem->quantity,
-            ]));
-            
-        });
     }
 
 
@@ -59,11 +71,17 @@ class OrderProcessor
             $productQuantity = $orderLine->product->getQuantity();
 
             if ($productQuantity === 0) {
-                throw new \InvalidArgumentException("{$productName} not available." );
+                throw new ProductNotAvailableException("{$productName} is not available at the moment... and for indefinite period of time actually. Sorry about that!" );
             }
 
             if ($orderLine->quantity > $productQuantity) {
-                throw new \InvalidArgumentException("{$productName} not sufficient quantity." );
+
+                Basket::updateOrCreate(
+                    ['user_id' => $this->user->id, 'product_id' => $orderLine->product->id],
+                    ['quantity' => $productQuantity]
+                );
+
+                throw new NotEnoughQuantityException("It seems there are faster buyers out there. You have still chance to get last {$productQuantity} item(s)." );
             }
         });
     }
@@ -71,28 +89,37 @@ class OrderProcessor
 
     private function validateUserBalance() {
 
-        $totalPrice = $this->order->getTotalPrice();
-
         $userBalance = $this->user->getBalance();
 
+        if ($userBalance === 0) {
+            throw new ZeroBalanceException("Add some $$$ in your wallet to guarantee better shopping experience next time." );
+        }
+
+        $totalPrice = Order::getTotalPrice($this->orderLines);
+
         if ($totalPrice > $userBalance) {
-            throw new \InvalidArgumentException("User balance not sufficient." );
+            throw new NotEnoughBalanceException("You can not afford such a purchase at the moment." );
         }
     }
 
 
-    private function validate() {
-
-        $this->validateNonZeroQuantities();
+    public function validate() {
 
         $this->validateProductAvailability();
 
         $this->validateUserBalance();
 
+        $this->validateNonZeroQuantities();
+
+        $this->isValidated = true;
     }
 
 
-    private function process() {
+    public function process() {
+
+        if (!$this->isValidated) {
+            $this->validate();
+        }
 
         DB::transaction(function () {
 
@@ -109,31 +136,13 @@ class OrderProcessor
 
             $this->order->refresh();
 
-            $totalPrice = $this->order->getTotalPrice();
+            $totalPrice = Order::getTotalPrice($this->order->orderLines);
 
             $this->user->updateBalance(-$totalPrice);
-
-            $this->user->emptyBasket();
 
             $this->user->refresh();
 
         }, self::DEADLOCK_SOLVE_ATTEMPTS);
 
-    }
-
-
-    /**
-     * Transform user basket to an order and updates user balance & product quantities.
-     *
-     * @return boolean
-     * @throws Exception
-     */
-    public function checkout() {
-
-        $this->validate();
-
-        $this->process();
-
-        return true;
     }
 }

@@ -69,6 +69,13 @@ class User extends Authenticatable
     }
 
 
+    public function setBalance(int $balance) {
+
+        return $this->wallet->setBalance($balance);
+
+    }
+
+
     public function updateBalance(int $change) {
 
         return $this->wallet->updateBalance($change);

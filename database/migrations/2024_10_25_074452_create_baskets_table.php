@@ -18,6 +18,8 @@ return new class extends Migration
             $table->integer('quantity')->unsigned()->default(0);
             $table->timestamp('created_at',6)->useCurrent();
             $table->timestamp('updated_at',6)->useCurrent();
+
+            $table->unique(['user_id', 'product_id']);
         });
     }
 
