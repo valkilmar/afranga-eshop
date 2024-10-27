@@ -1,0 +1,50 @@
+networks:
+  laravel:
+
+services:
+  app:
+    image: app
+    container_name: app
+    build:
+      target: web
+      context: .
+    env_file:
+      - .env
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+
+  node:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    image: node
+    container_name: node
+    ports:
+    - "3000:3000"
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - /var/www/html
+      - /var/www/html/node_modules
+    networks:
+      - laravel
+
+  mysql:
+    platform: "linux/amd64"
+    container_name: mysql
+    image: mysql:5.7
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - laravel
+
+volumes:
+  dbdata:
