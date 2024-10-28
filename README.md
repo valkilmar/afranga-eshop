@@ -8,7 +8,7 @@ Next, navigate in your terminal to the directory you cloned this, and spin up th
 Next, create few tables and feed with sample data:
 `docker exec app php artisan migrate:fresh --seed`
 
-Go to your browser. Hopefully you'll see the app running at this url:
+Go to your browser. Hopefully you'll see the app running at:
 `http://127.0.0.1:8000`
 
 
