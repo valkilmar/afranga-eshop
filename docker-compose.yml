@@ -39,6 +39,11 @@ services:
     platform: "linux/amd64"
     container_name: mysql
     image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: 'afranga_eshop'
+      MYSQL_USER: 'afuser'
+      MYSQL_PASSWORD: 'afpass'
+      MYSQL_ROOT_PASSWORD: 'afpass'
     ports:
       - "3306:3306"
     volumes:
